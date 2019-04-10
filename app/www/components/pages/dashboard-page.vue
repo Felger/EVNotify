@@ -4,7 +4,7 @@
         <v-tour name="dashboard-tour" :steps="steps" :callbacks="tourCallbacks"></v-tour>
         <toolbar @debugChanged="debugInfo()" class="v-step-1"></toolbar>
         <div class="content-within-page">
-            <vueper-slides :fixed-height="true" class="v-step-2">
+            <vueper-slides :fixed-height="true" class="v-step-2" v-if="false">
                 <vueper-slide v-for="i in 4" :key="i">
                     <div slot="slideContent">
                         <div v-if="i === 1" class="md-layout md-gutter md-alignment-center dashboard-card-list">
@@ -181,6 +181,62 @@
                     </div>
                 </vueper-slide>
             </vueper-slides>
+            <v-layout row v-if="true">
+                <v-flex xs12 sm6 offset-sm3>
+                <v-card class="cycle-dashboard-card">
+                    <div id="progressCycle" ref="progressCycle"></div>
+                    <p class="text-xs-center caption updated-data-timestamp-text">Updated 2 seconds ago</p>
+                    <v-list subheader>
+                    <v-subheader>Charging information</v-subheader>
+                    <v-list-tile
+                        v-for="item in items"
+                        :key="item.title"
+                        avatar
+                        @click=""
+                    >
+                        <v-list-tile-avatar>
+                        <img :src="item.avatar">
+                        </v-list-tile-avatar>
+
+                        <v-list-tile-content>
+                        <v-list-tile-title v-html="item.title"></v-list-tile-title>
+                        </v-list-tile-content>
+
+                        <v-list-tile-action>
+                            <v-list-tile-title v-html="item.value"></v-list-tile-title>
+                        <!-- <v-icon :color="item.active ? 'teal' : 'grey'">chat_bubble</v-icon> -->
+                        </v-list-tile-action>
+                    </v-list-tile>
+                    </v-list>
+
+                    <v-divider></v-divider>
+
+                    <v-list subheader>
+                    <v-subheader>Battery information</v-subheader>
+
+                    <v-list-tile
+                        v-for="item in items2"
+                        :key="item.title"
+                        avatar
+                        @click=""
+                    >
+                        <v-list-tile-avatar>
+                        <img :src="item.avatar">
+                        </v-list-tile-avatar>
+
+                        <v-list-tile-content>
+                        <v-list-tile-title v-html="item.title"></v-list-tile-title>
+                        </v-list-tile-content>
+
+                        <v-list-tile-action>
+                            <v-list-tile-title v-html="item.value"></v-list-tile-title>
+                        <!-- <v-icon :color="item.active ? 'teal' : 'grey'">chat_bubble</v-icon> -->
+                        </v-list-tile-action>
+                    </v-list-tile>
+                    </v-list>
+                </v-card>
+                </v-flex>
+            </v-layout>
         </div>
         <AMPERAE ref="AMPERA_E"></AMPERAE>
         <IONIQBEV ref="IONIQ_BEV"></IONIQBEV>
@@ -214,6 +270,16 @@
     export default {
         data() {
             return {
+                items: [
+                    { title: 'Estimated range', avatar: 'icons/car.svg', value: '130/200km'},
+                    {title: 'Remaining time', avatar: 'icons/schedule.svg', value: '00:21h' },
+                    {title: 'Charging since', avatar: 'icons/ev_station.svg', value: '00:12h'},
+                    {title: 'Charged amount of energy', avatar: 'icons/battery_20.svg', value: '13.24kWh'}
+                ],
+        items2: [
+            { title: 'Batt. Temp. (Min/Max/Inlet)', avatar: 'icons/temperature.svg', value: '14/15/16°C'},
+          { title: 'Aux Battery Voltage', avatar: 'icons/flash.svg', value: '14.12V' },
+        ],
                 obd2Data: {},
                 bluetoothInterval: 0,
                 syncInterval: 0,
@@ -762,6 +828,42 @@
                 self.steps.forEach(step => step.content = translation.translate(step.content));
                 self.$tours['dashboard-tour'].start();
             }
+
+            // TESTING SOC CYCLE
+            var bar = new ProgressBar.SemiCircle(self.$refs.progressCycle, {
+                strokeWidth: 6,
+                color: '#FFEA82',
+                trailColor: '#448aff',
+                trailWidth: 1,
+                easing: 'easeInOut',
+                duration: 1400,
+                svgStyle: null,
+                text: {
+                    value: '',
+                    className: 'progress-cycle-text',
+                    alignToBottom: true
+                },
+                from: {color: '#ff0000'},
+                to: {color: '#5eff00'},
+                // Set default step function for all animate calls
+                step: (state, bar) => {
+                    bar.path.setAttribute('stroke', state.color);
+                    var value = Math.round(bar.value() * 100);
+                    if (value === 0) {
+                    bar.setText('');
+                    } else {
+                    bar.setText(value + '%' + '<br><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"> <path d="M0 0h24v24H0z" fill="none"/> <path d="M7 2v11h3v9l7-12h-4l4-8z"/> </svg><br>-12.34kW');
+                    }
+
+                    bar.text.style.color = state.color;
+                    bar.text.style.textAlign = 'center';
+                }
+                });
+
+            bar.text.style.fontFamily = '"Raleway", Helvetica, sans-serif';
+            bar.text.style.fontSize = '2rem';
+
+            bar.animate(0.65);  // Number from 0.0 to 1.0
         }
     }
 </script>
@@ -771,3 +873,28 @@
     fill: #448aff;
 }
 </style>
+
+<style scoped>
+.v-list__tile__action .v-list__tile__title {
+    text-align: right;
+}
+#progressCycle {
+  margin: auto;
+  width: 50%;
+  height: auto;
+}
+#progressCycle .progress-cycle-text {
+    width: 100%;
+    margin: auto;
+    left: 0;
+    transform: translate(-50%);
+}
+.cycle-dashboard-card {
+    padding-top: 45px;
+}
+.updated-data-timestamp-text {
+    color: #b2b2b2;
+}
+
+</style>
+
