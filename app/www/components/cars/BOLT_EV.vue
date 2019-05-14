@@ -11,7 +11,19 @@
                 ],
                 inStandbyMode: false,
                 offset: 0,
-                command: '015B'
+                commands: [
+                  '228334', //displayed SoC
+                  '015B',   //bms SoC
+                  '222885', //pack voltage
+                  '222414', //pack current
+                  '0146',   //ext temp
+                  '2241A3', //battery capacity
+                  '22434F', //battery temp
+                  '22000D', //speed
+                  '22436B', //DC charger current
+                  '22436C', //DC charger voltage
+                ],
+                cmd_index: 0,
             };
         },
         methods: {
@@ -51,7 +63,10 @@
                     if (self.offset + 1 === self.initCMD.length) {
                         // init of dongle finished, parse data and just send the OBD2 command
                         eventBus.$emit('obd2Data', self.parseData(data));
-                        setTimeout(() => bluetoothSerial.write(self.command + '\r'), 2000);
+                        setTimeout(function(){
+                          bluetoothSerial.write(self.commands[self.cmd_index] + '\r');
+                          self.cmd_index = (self.cmd_index >= self.commands.length - 1) ? 0 : self.cmd_index+1;
+                        }, 2000/self.commands.length); //Send commands faster to make it through longer command list in 2 seconds.
                     } else bluetoothSerial.write(self.initCMD[++self.offset] + '\r');
                 }, err => console.error(err));
 
@@ -64,15 +79,43 @@
                     baseData = self.getBaseData();
 
                 try {
-                    if (data.indexOf('415B') !== -1) {
+                  // '228334', //displayed SoC
+                  // '222885', //volts
+                  // '222414', //amps
+                  // '0146',   //ext temp
+                  // '2241A3', //battery capacity
+                  // '22434F', //battery temp
+                  // '22000D', //speed
+                    if (data.indexOf('228334') !== -1) {
                         parsedData = {
-                            SOC_DISPLAY: (parseInt(data.substr(data.indexOf('415B'), 6).slice(-2), 16) * 100 / 255).toFixed(2), // following 2 bytes from response after 415B
-                            CHARGING: 1, // TODO
-                            SLOW_CHARGE_PORT: 1, // TODO
-                            NORMAL_CHARGE_PORT: 1, // TODO
-                            RAPID_CHARGE_PORT: 1 // TODO
+                            SOC_DISPLAY: (parseInt(data.substr(data.indexOf('228334'), 6).slice(-2), 16) * 100 / 255).toFixed(2), // following 2 bytes from response after 415B
                         }
-                    }
+                    } //TODO parse each response correctly
+                      // CHARGING: if charge current is > 0?
+                      // SPEED(obd): A
+                      // SOC_BMS: A*100/255
+                      // BATTERY_MIN_TEMPERATURE: A-40
+                      // BATTERY_MAX_TEMPERATURE:
+                      // DC_BATTERY_VOLTAGE: ((A*256)+B)/2 ((
+                      //         parseInt(
+                      //             extractedSecondData.slice(2, 4), 16 // second byte within 2nd block
+                      //         ) << 8) +
+                      //     parseInt(
+                      //         extractedSecondData.slice(4, 6), 16 // third byte within 2nd block
+                      //     )
+                      // ) / 10,
+                      // DC_BATTERY_CURRENT: ((Signed(A)*256+b))/20 helper.parseSigned(
+                      //   (extractedFirstData.slice(12, 14) + extractedSecondData.slice(0, 2)), 16 // concat 7th byte of first block with first byte of second block
+                      // ) * 0.1,
+                      // SOC_DISPLAY: A*100/255
+                      // SOH: ((A*256)+B)/30 = out of 60kWh ((
+                      //         parseInt(
+                      //             extractedFourthData.slice(0, 2), 16 // first byte within 4th block
+                      //         ) << 8) +
+                      //     parseInt(
+                      //         extractedFourthData.slice(2, 4), 16 // second byte within 4th block
+                      //     )
+                      // ) / 10
                 } catch (err) {
                     console.error(err);
                 }
