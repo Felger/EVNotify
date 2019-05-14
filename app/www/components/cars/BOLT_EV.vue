@@ -129,9 +129,9 @@
             getBaseData() {
                 return {
                     CAPACITY: 60,
-                    SLOW_SPEED: 2.3,
-                    NORMAL_SPEED: 4.6,
-                    FAST_SPEED: 40
+                    SLOW_SPEED: 1.44,
+                    NORMAL_SPEED: 7.68,
+                    FAST_SPEED: 56
                 };
             },
             standbyMode() {
